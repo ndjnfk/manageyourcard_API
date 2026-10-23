@@ -50,6 +50,9 @@ router
       .group(() => {
         router.get('/', [controllers.Cards, 'index'])
         router.post('/', [controllers.Cards, 'store'])
+        // One card in full, for its own page. Declared after '/' so the
+        // register listing is not swallowed by the wildcard segment.
+        router.get(':cardId', [controllers.Cards, 'show'])
         // Edits the name, the notes, and whether the card is closed. The
         // dates and the card number are not editable — see the validator.
         router.patch(':cardId', [controllers.Cards, 'update'])
@@ -66,6 +69,26 @@ router
         router.patch('profile', [controllers.ShopProfile, 'update'])
         router.put('profile/photo', [controllers.ShopProfile, 'uploadPhoto'])
         router.delete('profile/photo', [controllers.ShopProfile, 'removePhoto'])
+
+        // Reminder settings and the browsers registered to receive push. Also
+        // scoped to the session's shop and nothing else — a device token
+        // decides whose customer names appear in a notification.
+        router.get('notifications', [controllers.Notifications, 'show'])
+        router.patch('notifications', [controllers.Notifications, 'update'])
+        router.post('notifications/devices', [controllers.Notifications, 'registerDevice'])
+        router.delete('notifications/devices', [controllers.Notifications, 'revokeDevice'])
+        // Sends this shop's real reminder now, bypassing today's send log.
+        router.post('notifications/test', [controllers.Notifications, 'test'])
+
+        // The in-app notification list — what the bell in the app bar opens.
+        // Separate from the settings above: those are about delivery, these
+        // are the notifications themselves.
+        router.get('notifications/inbox', [controllers.Notifications, 'inbox'])
+        // Just the badge number, so drawing the app bar does not pull every
+        // notification body on every page.
+        router.get('notifications/inbox/unread', [controllers.Notifications, 'unreadCount'])
+        router.post('notifications/inbox/read', [controllers.Notifications, 'markAllRead'])
+        router.post('notifications/inbox/:id/read', [controllers.Notifications, 'markRead'])
       })
       .prefix('account')
       .as('account')

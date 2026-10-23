@@ -18,7 +18,14 @@ const SHOPKEEPER_SESSION_PATTERNS = ['myc:session:*', 'myc:sessions:*']
  * it would lock everyone out of the panel with no way back except the command
  * line.
  */
-const SHOP_COLLECTIONS = ['users', 'cards', 'counters']
+const SHOP_COLLECTIONS = [
+  'users',
+  'cards',
+  'counters',
+  'pushTokens',
+  'notificationLog',
+  'notifications',
+]
 
 /**
  * Signs every shopkeeper out by removing their session keys.
@@ -85,6 +92,12 @@ export interface DeletedShop {
   sessions: number
   counters: number
   photoRemoved: boolean
+  /** Registered push devices removed. */
+  devices: number
+  /** Reminder log entries removed. */
+  reminders: number
+  /** In-app notifications removed. */
+  notifications: number
 }
 
 /**
@@ -101,6 +114,8 @@ export async function deleteShop(shopkeeperId: string): Promise<DeletedShop | nu
   const { default: shopkeepers } = await import('#services/shopkeepers')
   const { default: cards } = await import('#services/cards')
   const { default: sessions } = await import('#services/sessions')
+  const { default: pushTokens } = await import('#services/push_tokens')
+  const { default: reminders } = await import('#services/reminders')
   const { deletePhoto } = await import('#services/photo_storage')
 
   const shopkeeper = await shopkeepers.findByShopkeeperId(shopkeeperId)
@@ -108,6 +123,15 @@ export async function deleteShop(shopkeeperId: string): Promise<DeletedShop | nu
 
   const cardsRemoved = await cards.collection.deleteMany({ shopkeeperId })
   const sessionsRemoved = await sessions.destroyAllFor(shopkeeperId)
+
+  // The device tokens are the part that actually matters here. A token left
+  // behind is a browser still subscribed to a shop that no longer exists — and
+  // if that ShopkeeperID were ever reused, it would receive a different shop's
+  // customer names. The reminder log is only housekeeping.
+  const devicesRemoved = await pushTokens.deleteForShop(shopkeeperId)
+  const remindersRemoved = await reminders.deleteForShop(shopkeeperId)
+  const { default: inbox } = await import('#services/inbox')
+  const notificationsRemoved = await inbox.deleteForShop(shopkeeperId)
 
   // The card-number counter goes too. Without it a shop registered later could
   // never reuse this ID anyway, but leaving it is a row that nothing will ever
@@ -124,6 +148,9 @@ export async function deleteShop(shopkeeperId: string): Promise<DeletedShop | nu
     sessions: sessionsRemoved,
     counters: counters.deletedCount,
     photoRemoved: Boolean(shopkeeper.photoFile),
+    devices: devicesRemoved,
+    reminders: remindersRemoved,
+    notifications: notificationsRemoved,
   }
 }
 

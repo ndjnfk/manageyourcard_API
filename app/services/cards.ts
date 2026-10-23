@@ -3,10 +3,10 @@ import shopkeepers from '#services/shopkeepers'
 import {
   AnyBulkWriteOperation,
   Collection,
+  Document,
   Filter,
   MongoServerError,
   ObjectId,
-  Sort,
 } from 'mongodb'
 
 /** The collection every card is stored in. */
@@ -46,6 +46,86 @@ const NUMBER_ATTEMPTS = 25
 
 /** How close a due date has to be before a card counts as due soon. */
 const DUE_SOON_DAYS = 7
+
+/**
+ * How long an expired card stays on the dashboard and the register.
+ *
+ * One day. A card that has just expired is still worth seeing where the
+ * shopkeeper is already looking — they may want to call the customer about it —
+ * but after that it is history, and leaving it among the live cards makes the
+ * register a list of things that cannot be acted on.
+ */
+const EXPIRED_GRACE_DAYS = 1
+
+/**
+ * How long anything stays on the history page before it is deleted.
+ *
+ * Four days from the day it arrives there. This is a real deletion, not a
+ * hiding: the document goes, and with it the customer's name, number, dates and
+ * renewal count. Nothing recovers it.
+ */
+const HISTORY_KEEP_DAYS = 4
+
+/** A whole number of days before or after `date`, at UTC midnight. */
+function shiftDays(date: Date, days: number): Date {
+  return new Date(date.getTime() + days * 86_400_000)
+}
+
+/**
+ * The queries that place a card in its stage of life, all derived from one
+ * `today` so that no two of them can disagree.
+ *
+ * A card moves: live → history → deleted. The boundaries have to be written
+ * once, because the register, the history page and the purge each need the same
+ * line drawn and drawing it three times is how a card ends up on two pages at
+ * once, or on neither.
+ */
+function lifecycle(today: Date) {
+  /** Expired long enough ago to have left the register. */
+  const pastGrace = { expiryDate: { $ne: null, $lt: shiftDays(today, -EXPIRED_GRACE_DAYS) } }
+
+  return {
+    /**
+     * Still on the dashboard and the register: not closed, and either without
+     * an expiry or inside the grace day.
+     *
+     * `$nor` rather than a negated `$lt`, because in BSON ordering null sorts
+     * before every date — a bare comparison would sweep out every card that has
+     * no expiry at all, which is most of them.
+     */
+    live: { completedAt: null, $nor: [pastGrace] } as Filter<CardDocument>,
+
+    /** On the history page: closed by the shopkeeper, or past its grace day. */
+    history: { $or: [{ completedAt: { $ne: null } }, pastGrace] } as Filter<CardDocument>,
+
+    /**
+     * Due for deletion: four days on the history page, counting the day it
+     * arrived there — the day it was closed, or the day after its grace ended.
+     *
+     * The two offsets differ by two, and the difference is not a mistake.
+     * `completedAt` is a timestamp on the day the card arrived, so it is
+     * already inside its first day; `expiryDate` is two days before the card
+     * reaches the page at all — one day of grace on the register, and the
+     * comparison being strict. Both then run for four days:
+     *
+     *   closed on the 1st   → shows 1–4  → deleted on the 5th
+     *   expires on the 1st  → shows 3–6  → deleted on the 7th
+     */
+    purge: {
+      $or: [
+        {
+          completedAt: { $ne: null, $lt: shiftDays(today, -(HISTORY_KEEP_DAYS - 1)) },
+        },
+        {
+          expiryDate: {
+            $ne: null,
+            $lt: shiftDays(today, -(EXPIRED_GRACE_DAYS + HISTORY_KEEP_DAYS)),
+          },
+        },
+      ],
+    } as Filter<CardDocument>,
+  }
+}
 
 /**
  * The states a card can be in.
@@ -185,7 +265,16 @@ export interface NewCard {
 }
 
 /** The buckets the register can be narrowed to, matching the dashboard's. */
-export type CardFilter = 'all' | 'active' | 'today' | 'week' | 'expired'
+/**
+ * The buckets the register can be narrowed to.
+ *
+ * 'overdue' and 'expired' are separate because they call for opposite things.
+ * An overdue card has a renewal date that has gone by and is exactly what the
+ * shopkeeper should be chasing; an expired one has run out and cannot be
+ * renewed at all. They used to share a bucket, which meant the list of cards to
+ * chase was padded with cards nobody could do anything about.
+ */
+export type CardFilter = 'all' | 'active' | 'today' | 'week' | 'overdue' | 'expired'
 
 /** How a listing is narrowed and paged. Everything is optional. */
 export interface ListOptions {
@@ -303,8 +392,16 @@ function bucketQuery(filter: CardFilter | undefined, today: Date): Filter<CardDo
   const expiryLive = { $or: [{ expiryDate: null }, { expiryDate: { $gte: today } }] }
 
   switch (filter) {
+    // Due date gone by, but the card itself is still alive — the ones worth
+    // ringing someone about. `expiryLive` is what keeps a card that has run
+    // out from padding the chase list.
+    case 'overdue':
+      return { $and: [{ dueDate: { $lt: today } }, expiryLive] }
+    // Run out. Nothing about the due date matters here: expiry outranks it, so
+    // a card that expired while its renewal was still days away belongs in
+    // this bucket and in no other.
     case 'expired':
-      return { $or: [{ dueDate: { $lt: today } }, expiryPassed] }
+      return expiryPassed
     case 'today':
       return { $and: [{ dueDate: today }, expiryLive] }
     case 'week':
@@ -427,11 +524,14 @@ class Cards {
     const { completed = false, page, perPage = 12 } = options
     const today = todayUtc()
 
-    // A missing completedAt and a null one both mean "still live" — the field
-    // did not exist before cards could be closed, and `null` matches both.
+    // `completed` names the two pages, not the flag: the history page holds
+    // cards the shopkeeper closed *and* cards whose expiry ran out days ago,
+    // and the register holds neither. A missing completedAt and a null one both
+    // mean "still live" — the field did not exist before cards could be closed.
+    const stage = lifecycle(today)
     const query: Filter<CardDocument> = {
       shopkeeperId,
-      completedAt: completed ? { $ne: null } : null,
+      ...(completed ? stage.history : stage.live),
     }
 
     // Collected into $and rather than merged, because the search and the filter
@@ -452,17 +552,52 @@ class Cards {
 
     if (conditions.length > 0) query.$and = conditions
 
-    const sort: Sort = completed ? { completedAt: -1 } : { dueDate: 1 }
-    const cursor = this.collection.find(query).sort(sort)
+    // History is read most-recent-first, and it now holds two kinds of card.
+    // `expiryDate` is the tie-break because an expired card has no completedAt
+    // at all — without it every expired card would land in one undifferentiated
+    // clump at the end, in whatever order the collection happened to return.
+    //
+    // The register is newest-issued first, with the cards inside their day of
+    // grace pushed to the bottom. "Expired" is a comparison against today
+    // rather than a stored field, so this is a pipeline and not a `.sort()`:
+    // MongoDB can only sort by values it holds, and the stored `status` is no
+    // substitute — it is refreshed *after* this query returns, so on the first
+    // read of a day it is exactly one day out of date.
+    //
+    // Sorting has to happen before skip/limit, or page 2 would be sorted
+    // within itself rather than being the second page of one ordering.
+    const stages: Document[] = [{ $match: query }]
+
+    if (completed) {
+      stages.push({ $sort: { completedAt: -1, expiryDate: -1, _id: 1 } })
+    } else {
+      stages.push(
+        {
+          $addFields: {
+            // `$ne: null` first and deliberately: in BSON ordering null sorts
+            // before every date, so `$lt` alone would call every card without
+            // an expiry expired — which is most of them.
+            _expired: {
+              $and: [{ $ne: ['$expiryDate', null] }, { $lt: ['$expiryDate', today] }],
+            },
+          },
+        },
+        // `_id` last so the order is total. Two cards issued the same day would
+        // otherwise be free to swap places between requests, which on a paged
+        // list means a card can appear twice or not at all.
+        { $sort: { _expired: 1, issueDate: -1, _id: 1 } },
+        { $unset: '_expired' }
+      )
+    }
 
     // Only paged when a page was asked for. The dashboard derives its counts
     // from the whole register, so a default page size would quietly break it.
     if (page && page > 0) {
-      cursor.skip((page - 1) * perPage).limit(perPage)
+      stages.push({ $skip: (page - 1) * perPage }, { $limit: perPage })
     }
 
     const [register, total] = await Promise.all([
-      cursor.toArray(),
+      this.collection.aggregate<CardDocument>(stages).toArray(),
       this.collection.countDocuments(query),
     ])
     const drifted: AnyBulkWriteOperation<CardDocument>[] = []
@@ -485,6 +620,104 @@ class Cards {
     }
 
     return { cards: register, total }
+  }
+
+  /**
+   * The live cards a reminder should mention: everything already overdue, plus
+   * everything falling due within `leadDays`.
+   *
+   * A query rather than a filter over `listForShop`, because the nightly sweep
+   * runs across every shop and only wants the handful of cards that need
+   * chasing — loading each shop's whole register to discard most of it would
+   * make the sweep's cost scale with cards held rather than cards due.
+   *
+   * Completed cards are excluded the same way as everywhere else: a closed card
+   * is finished, and reminding anyone about it would be wrong.
+   *
+   * No lower bound on the overdue end. A card three months past its due date is
+   * still an outstanding renewal that nobody has closed, and a reminder that
+   * quietly stopped mentioning it would be the app losing track of exactly the
+   * thing it exists to track.
+   */
+  async dueForReminder(shopkeeperId: string, leadDays: number): Promise<CardDocument[]> {
+    const today = todayUtc()
+    const horizon = new Date(today.getTime() + leadDays * DAY_MS)
+
+    return this.collection
+      .find({
+        shopkeeperId,
+        // The same `live` set the register shows, rather than "not completed".
+        // A card whose grace day is over has moved to the history page and is
+        // days from being deleted; reminding a shop about it every morning is
+        // notifying them about something the app has already filed away.
+        ...lifecycle(today).live,
+        dueDate: { $lte: horizon },
+      })
+      .sort({ dueDate: 1 })
+      .toArray()
+  }
+
+  /**
+   * One card, or null.
+   *
+   * `shopkeeperId` is part of the query rather than checked afterwards. A shop
+   * asking for a CardID that is not theirs must get "no such card", not
+   * somebody else's customer — and the surest way to guarantee that is for the
+   * lookup to be incapable of finding it.
+   *
+   * The stored status is refreshed on the way out, for the same reason the list
+   * does it: a card goes from Due Soon to Expired with nobody touching it, so a
+   * status only written on save is wrong within days.
+   */
+  async findForShop(shopkeeperId: string, cardId: string): Promise<CardDocument | null> {
+    const card = await this.collection.findOne({ cardId, shopkeeperId })
+    if (!card) return null
+
+    const current = statusOf(card)
+
+    if (current !== card.status) {
+      card.status = current
+      await this.collection.updateOne(
+        { _id: card._id },
+        { $set: { status: current, updatedAt: new Date() } }
+      )
+    }
+
+    return card
+  }
+
+  /**
+   * Deletes every card that has served its four days on the history page.
+   *
+   * **This destroys data and nothing recovers it.** The document goes: the
+   * customer's name and number, the dates, the renewal count, the note. A card
+   * deleted here cannot be looked up later to answer "has this customer been in
+   * before?", because there is no longer anything to look up.
+   *
+   * Deliberately a swept job rather than a delete on read. A page that quietly
+   * destroyed records while being looked at would make the amount of data lost
+   * depend on who happened to open which screen, and a shop that did not log in
+   * for a fortnight would lose everything at once on the day they did.
+   *
+   * Returns how many were deleted, so the run can be logged honestly — this is
+   * the one job where "it did nothing" and "it removed forty cards" must not
+   * look the same afterwards.
+   */
+  async purgeHistory(): Promise<number> {
+    const result = await this.collection.deleteMany(lifecycle(todayUtc()).purge)
+
+    return result.deletedCount
+  }
+
+  /**
+   * What `purgeHistory` would delete, without deleting it.
+   *
+   * Exists so the boundary can be checked against real data before anything is
+   * destroyed, and so a scheduled run can be rehearsed. There is no undo to
+   * fall back on, which makes a dry run the only safety there is.
+   */
+  async purgeCandidates(): Promise<CardDocument[]> {
+    return this.collection.find(lifecycle(todayUtc()).purge).sort({ cardNumber: 1 }).toArray()
   }
 
   /**

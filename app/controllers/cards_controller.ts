@@ -10,7 +10,14 @@ import type { HttpContext } from '@adonisjs/core/http'
 /** Matches the service's own default, so the meta reports the size actually used. */
 const DEFAULT_PER_PAGE = 12
 
-const FILTERS: readonly CardFilter[] = ['all', 'active', 'today', 'week', 'expired']
+const FILTERS: readonly CardFilter[] = [
+  'all',
+  'active',
+  'today',
+  'week',
+  'overdue',
+  'expired',
+]
 
 /**
  * Reads the filter from the query string, ignoring anything unrecognised.
@@ -87,6 +94,25 @@ export default class CardsController {
     })
 
     return response.created({ data: cards.toPublic(card) })
+  }
+
+  /**
+   * One card in full, for the card's own page.
+   *
+   * Fetched by CardID rather than handed down from whichever list was on
+   * screen, so the page can be opened from a link, a bookmark or a reload and
+   * still work. A card belonging to another shop produces the same 404 as one
+   * that does not exist — telling the difference would confirm that somebody
+   * else's CardID is real.
+   */
+  async show({ shopkeeper, response, params }: HttpContext) {
+    const card = await cards.findForShop(shopkeeper.shopkeeperId, params.cardId)
+
+    if (!card) {
+      return response.notFound({ message: 'That card is not in your register' })
+    }
+
+    return response.ok({ data: cards.toPublic(card) })
   }
 
   /**

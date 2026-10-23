@@ -16,6 +16,9 @@ export default class MongodbProvider {
     const { default: shopkeepers } = await import('#services/shopkeepers')
     const { default: cards } = await import('#services/cards')
     const { default: admins } = await import('#services/admin/admins')
+    const { default: pushTokens } = await import('#services/push_tokens')
+    const { default: reminders } = await import('#services/reminders')
+    const { default: inbox } = await import('#services/inbox')
     const { default: logger } = await import('@adonisjs/core/services/logger')
 
     await mongodb.connect()
@@ -26,6 +29,13 @@ export default class MongodbProvider {
     await shopkeepers.createIndexes()
     await cards.createIndexes()
     await admins.createIndexes()
+    // A push token is unique per device, and a reminder is unique per shop per
+    // channel per day. Both are enforced by indexes rather than by checking
+    // first — the reminder one in particular is the only thing stopping two
+    // overlapping cron runs from sending everything twice.
+    await pushTokens.createIndexes()
+    await reminders.createIndexes()
+    await inbox.createIndexes()
 
     logger.info('MongoDB connected')
   }

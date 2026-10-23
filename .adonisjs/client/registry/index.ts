@@ -48,6 +48,12 @@ const routes = {
     tokens: [{"old":"/api/v1/cards","type":0,"val":"api","end":""},{"old":"/api/v1/cards","type":0,"val":"v1","end":""},{"old":"/api/v1/cards","type":0,"val":"cards","end":""}],
     types: placeholder as Registry['cards.cards.store']['types'],
   },
+  'cards.cards.show': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/cards/:cardId',
+    tokens: [{"old":"/api/v1/cards/:cardId","type":0,"val":"api","end":""},{"old":"/api/v1/cards/:cardId","type":0,"val":"v1","end":""},{"old":"/api/v1/cards/:cardId","type":0,"val":"cards","end":""},{"old":"/api/v1/cards/:cardId","type":1,"val":"cardId","end":""}],
+    types: placeholder as Registry['cards.cards.show']['types'],
+  },
   'cards.cards.update': {
     methods: ["PATCH"],
     pattern: '/api/v1/cards/:cardId',
@@ -77,6 +83,60 @@ const routes = {
     pattern: '/api/v1/account/profile/photo',
     tokens: [{"old":"/api/v1/account/profile/photo","type":0,"val":"api","end":""},{"old":"/api/v1/account/profile/photo","type":0,"val":"v1","end":""},{"old":"/api/v1/account/profile/photo","type":0,"val":"account","end":""},{"old":"/api/v1/account/profile/photo","type":0,"val":"profile","end":""},{"old":"/api/v1/account/profile/photo","type":0,"val":"photo","end":""}],
     types: placeholder as Registry['account.shop_profile.remove_photo']['types'],
+  },
+  'account.notifications.show': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/account/notifications',
+    tokens: [{"old":"/api/v1/account/notifications","type":0,"val":"api","end":""},{"old":"/api/v1/account/notifications","type":0,"val":"v1","end":""},{"old":"/api/v1/account/notifications","type":0,"val":"account","end":""},{"old":"/api/v1/account/notifications","type":0,"val":"notifications","end":""}],
+    types: placeholder as Registry['account.notifications.show']['types'],
+  },
+  'account.notifications.update': {
+    methods: ["PATCH"],
+    pattern: '/api/v1/account/notifications',
+    tokens: [{"old":"/api/v1/account/notifications","type":0,"val":"api","end":""},{"old":"/api/v1/account/notifications","type":0,"val":"v1","end":""},{"old":"/api/v1/account/notifications","type":0,"val":"account","end":""},{"old":"/api/v1/account/notifications","type":0,"val":"notifications","end":""}],
+    types: placeholder as Registry['account.notifications.update']['types'],
+  },
+  'account.notifications.register_device': {
+    methods: ["POST"],
+    pattern: '/api/v1/account/notifications/devices',
+    tokens: [{"old":"/api/v1/account/notifications/devices","type":0,"val":"api","end":""},{"old":"/api/v1/account/notifications/devices","type":0,"val":"v1","end":""},{"old":"/api/v1/account/notifications/devices","type":0,"val":"account","end":""},{"old":"/api/v1/account/notifications/devices","type":0,"val":"notifications","end":""},{"old":"/api/v1/account/notifications/devices","type":0,"val":"devices","end":""}],
+    types: placeholder as Registry['account.notifications.register_device']['types'],
+  },
+  'account.notifications.revoke_device': {
+    methods: ["DELETE"],
+    pattern: '/api/v1/account/notifications/devices',
+    tokens: [{"old":"/api/v1/account/notifications/devices","type":0,"val":"api","end":""},{"old":"/api/v1/account/notifications/devices","type":0,"val":"v1","end":""},{"old":"/api/v1/account/notifications/devices","type":0,"val":"account","end":""},{"old":"/api/v1/account/notifications/devices","type":0,"val":"notifications","end":""},{"old":"/api/v1/account/notifications/devices","type":0,"val":"devices","end":""}],
+    types: placeholder as Registry['account.notifications.revoke_device']['types'],
+  },
+  'account.notifications.test': {
+    methods: ["POST"],
+    pattern: '/api/v1/account/notifications/test',
+    tokens: [{"old":"/api/v1/account/notifications/test","type":0,"val":"api","end":""},{"old":"/api/v1/account/notifications/test","type":0,"val":"v1","end":""},{"old":"/api/v1/account/notifications/test","type":0,"val":"account","end":""},{"old":"/api/v1/account/notifications/test","type":0,"val":"notifications","end":""},{"old":"/api/v1/account/notifications/test","type":0,"val":"test","end":""}],
+    types: placeholder as Registry['account.notifications.test']['types'],
+  },
+  'account.notifications.inbox': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/account/notifications/inbox',
+    tokens: [{"old":"/api/v1/account/notifications/inbox","type":0,"val":"api","end":""},{"old":"/api/v1/account/notifications/inbox","type":0,"val":"v1","end":""},{"old":"/api/v1/account/notifications/inbox","type":0,"val":"account","end":""},{"old":"/api/v1/account/notifications/inbox","type":0,"val":"notifications","end":""},{"old":"/api/v1/account/notifications/inbox","type":0,"val":"inbox","end":""}],
+    types: placeholder as Registry['account.notifications.inbox']['types'],
+  },
+  'account.notifications.unread_count': {
+    methods: ["GET","HEAD"],
+    pattern: '/api/v1/account/notifications/inbox/unread',
+    tokens: [{"old":"/api/v1/account/notifications/inbox/unread","type":0,"val":"api","end":""},{"old":"/api/v1/account/notifications/inbox/unread","type":0,"val":"v1","end":""},{"old":"/api/v1/account/notifications/inbox/unread","type":0,"val":"account","end":""},{"old":"/api/v1/account/notifications/inbox/unread","type":0,"val":"notifications","end":""},{"old":"/api/v1/account/notifications/inbox/unread","type":0,"val":"inbox","end":""},{"old":"/api/v1/account/notifications/inbox/unread","type":0,"val":"unread","end":""}],
+    types: placeholder as Registry['account.notifications.unread_count']['types'],
+  },
+  'account.notifications.mark_all_read': {
+    methods: ["POST"],
+    pattern: '/api/v1/account/notifications/inbox/read',
+    tokens: [{"old":"/api/v1/account/notifications/inbox/read","type":0,"val":"api","end":""},{"old":"/api/v1/account/notifications/inbox/read","type":0,"val":"v1","end":""},{"old":"/api/v1/account/notifications/inbox/read","type":0,"val":"account","end":""},{"old":"/api/v1/account/notifications/inbox/read","type":0,"val":"notifications","end":""},{"old":"/api/v1/account/notifications/inbox/read","type":0,"val":"inbox","end":""},{"old":"/api/v1/account/notifications/inbox/read","type":0,"val":"read","end":""}],
+    types: placeholder as Registry['account.notifications.mark_all_read']['types'],
+  },
+  'account.notifications.mark_read': {
+    methods: ["POST"],
+    pattern: '/api/v1/account/notifications/inbox/:id/read',
+    tokens: [{"old":"/api/v1/account/notifications/inbox/:id/read","type":0,"val":"api","end":""},{"old":"/api/v1/account/notifications/inbox/:id/read","type":0,"val":"v1","end":""},{"old":"/api/v1/account/notifications/inbox/:id/read","type":0,"val":"account","end":""},{"old":"/api/v1/account/notifications/inbox/:id/read","type":0,"val":"notifications","end":""},{"old":"/api/v1/account/notifications/inbox/:id/read","type":0,"val":"inbox","end":""},{"old":"/api/v1/account/notifications/inbox/:id/read","type":1,"val":"id","end":""},{"old":"/api/v1/account/notifications/inbox/:id/read","type":0,"val":"read","end":""}],
+    types: placeholder as Registry['account.notifications.mark_read']['types'],
   },
   'adminAuth.auth.store': {
     methods: ["POST"],

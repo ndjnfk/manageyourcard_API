@@ -21,6 +21,41 @@ const SHOPKEEPER_SEQUENCE = 'shopkeeperId'
 const ID_PREFIX = 'SHP'
 const ID_DIGITS = 5
 
+/**
+ * What a shop has chosen to be told about, and how.
+ *
+ * The two channels are independent rather than one setting with levels: a
+ * shopkeeper standing at the counter all day wants the push and not the mail,
+ * and one who works off a laptop wants the reverse. Collapsing them into a
+ * single "notify me" would force both on whoever wanted either.
+ */
+export interface NotificationPreferences {
+  /** Push to registered browsers and installed PWAs. */
+  push: boolean
+  /** The daily reminder email to the shop's registered address. */
+  email: boolean
+  /**
+   * Days before a due date that reminders start. Null follows the server's
+   * REMINDER_LEAD_DAYS, which matches the dashboard's "Due Soon" window.
+   */
+  leadDays: number | null
+}
+
+/**
+ * What a shop gets before it has chosen anything.
+ *
+ * Both channels start on. The whole point of the product is not missing a
+ * renewal date, so a shop that never opens the settings page should still be
+ * reminded — defaulting to silence would make the feature invisible to exactly
+ * the shopkeepers it is for. Both are one toggle away from off, and the email
+ * only ever goes to the address they registered with.
+ */
+export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferences = {
+  push: true,
+  email: true,
+  leadDays: null,
+}
+
 /** A shop as it is stored. */
 export interface ShopkeeperDocument {
   _id: ObjectId
@@ -47,6 +82,12 @@ export interface ShopkeeperDocument {
    * <img src> cannot send an Authorization header.
    */
   photoFile: string | null
+  /**
+   * Optional because every shop registered before notifications existed has no
+   * such field. Absent is not "everything off" — read it through
+   * `notificationsFor`, which fills in the defaults.
+   */
+  notifications?: NotificationPreferences
   createdAt: Date
   updatedAt: Date
 }
@@ -64,6 +105,8 @@ export interface PublicShopkeeper {
   email: string
   /** Absolute URL of the profile photo, or null if none has been uploaded. */
   photoUrl: string | null
+  /** Always fully populated, even for shops that predate the settings. */
+  notifications: NotificationPreferences
   createdAt: string
 }
 
@@ -108,6 +151,23 @@ export function photoUrlFor(photoFile: string): string {
 }
 
 /**
+ * A shop's notification settings, with anything unset filled in.
+ *
+ * The one place preferences should be read from. Every shop that registered
+ * before these existed has no `notifications` field at all, and a caller
+ * checking `shopkeeper.notifications?.email` directly would read that absence
+ * as "off" — silently excluding every existing shop from the reminders the
+ * defaults say they should get. Spread over the defaults rather than swapped
+ * for them, so a document holding only `{ push: false }` keeps its choice and
+ * still gets a usable `email` and `leadDays`.
+ */
+export function notificationsFor(
+  shopkeeper: Pick<ShopkeeperDocument, 'notifications'>
+): NotificationPreferences {
+  return { ...DEFAULT_NOTIFICATION_PREFERENCES, ...(shopkeeper.notifications ?? {}) }
+}
+
+/**
  * The shopkeeper register. Everything that touches the `users` collection goes
  * through here, so the rules that make a shop a shop — a normalised mobile, a
  * lower-cased email, a hashed password, an assigned ShopkeeperID — hold no
@@ -131,6 +191,7 @@ class Shopkeepers {
       mobile: shopkeeper.mobile,
       email: shopkeeper.email,
       photoUrl: shopkeeper.photoFile ? photoUrlFor(shopkeeper.photoFile) : null,
+      notifications: notificationsFor(shopkeeper),
       createdAt: shopkeeper.createdAt.toISOString(),
     }
   }
@@ -243,6 +304,9 @@ class Shopkeepers {
       email: this.normaliseEmail(input.email),
       password: await hash.make(input.password),
       photoFile: null,
+      // Written out at registration rather than left to the fallback, so a new
+      // shop's settings page shows the toggles reflecting a stored choice.
+      notifications: { ...DEFAULT_NOTIFICATION_PREFERENCES },
       createdAt: now,
       updatedAt: now,
     }
@@ -301,6 +365,51 @@ class Shopkeepers {
     }
 
     return { ...shopkeeper, ...update }
+  }
+
+  /**
+   * Saves a shop's notification settings and returns the updated shop.
+   *
+   * Merged over what is already stored rather than replacing it, so the
+   * settings page can send one changed toggle without having to echo back the
+   * others — and so a shop with no stored preferences at all ends up with a
+   * complete set rather than a document holding a single key.
+   */
+  async updateNotifications(
+    shopkeeperId: string,
+    changes: Partial<NotificationPreferences>
+  ): Promise<ShopkeeperDocument | null> {
+    const shopkeeper = await this.findByShopkeeperId(shopkeeperId)
+    if (!shopkeeper) return null
+
+    const notifications: NotificationPreferences = {
+      ...notificationsFor(shopkeeper),
+      ...changes,
+    }
+
+    await this.collection.updateOne(
+      { _id: shopkeeper._id },
+      { $set: { notifications, updatedAt: new Date() } }
+    )
+
+    return { ...shopkeeper, notifications }
+  }
+
+  /**
+   * Every shop that has asked to be reminded on some channel.
+   *
+   * Written as "neither channel is explicitly off" rather than "some channel is
+   * on", because the defaults are on and most documents will not name the field
+   * at all — a query for `notifications.email: true` would match none of them
+   * and the nightly sweep would mail nobody. `$ne: false` matches true, missing
+   * and null alike, which is exactly the set `notificationsFor` resolves to on.
+   */
+  async withRemindersEnabled(): Promise<ShopkeeperDocument[]> {
+    return this.collection
+      .find({
+        $or: [{ 'notifications.email': { $ne: false } }, { 'notifications.push': { $ne: false } }],
+      })
+      .toArray()
   }
 
   /**

@@ -28,3 +28,13 @@ yarn-error.log
 
 # Platform specific
 .DS_Store
+
+# Firebase credentials
+#
+# The service account key signs every push this server sends; anyone holding it
+# can notify every shopkeeper in the register. It is read through the FIREBASE_*
+# variables in .env, so the file itself never needs to be in the repository —
+# but it sits in this directory, one `git add .` away from being published.
+*firebase-adminsdk*.json
+GoogleService-Info.plist
+google-services.json

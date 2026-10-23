@@ -12,6 +12,7 @@ export const controllers = {
   },
   Cards: () => import('#controllers/cards_controller'),
   NewAccount: () => import('#controllers/new_account_controller'),
+  Notifications: () => import('#controllers/notifications_controller'),
   Profile: () => import('#controllers/profile_controller'),
   Registration: () => import('#controllers/registration_controller'),
   Sessions: () => import('#controllers/sessions_controller'),

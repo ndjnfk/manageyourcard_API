@@ -55,6 +55,16 @@ export default defineConfig({
     () => import('#providers/api_provider'),
     () => import('#providers/mongodb_provider'),
     () => import('#providers/redis_provider'),
+    /**
+     * Last, so its `ready` runs after MongoDB and Redis are connected — and
+     * only in the web process. An ace command or a test run booting a
+     * scheduler of its own would keep its event loop alive until the next
+     * scheduled slot.
+     */
+    {
+      file: () => import('#providers/scheduler_provider'),
+      environment: ['web'],
+    },
   ],
 
   /*

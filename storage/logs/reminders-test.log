@@ -1,0 +1,40 @@
+===== TEST 30-07-2026 22:30:59.79 ===== 
+[17:01:02.392] [32mINFO[39m (23800): [36mMongoDB connected[39m
+[17:01:02.455] [32mINFO[39m (23800): [36mRedis connected[39m
+[ info ] Email via smtp as manageyourcard <tanyagulati06@gmail.com>
+[ info ] SHP-00001 · 3 card(s) · push: sent · email: sent
+[ success ] Done. 2 shop(s) checked, 1 with nothing due, 1 pushed, 1 emailed.
+===== TEST 30-07-2026 22:32:00.74 ===== 
+[17:02:02.773] [32mINFO[39m (16620): [36mMongoDB connected[39m
+[17:02:02.826] [32mINFO[39m (16620): [36mRedis connected[39m
+[ info ] Email via smtp as manageyourcard <tanyagulati06@gmail.com>
+[ info ] SHP-00001 · 3 card(s) · push: sent · email: sent
+[ success ] Done. 2 shop(s) checked, 1 with nothing due, 1 pushed, 1 emailed.
+===== TEST 30-07-2026 22:33:00.75 ===== 
+[17:03:02.768] [32mINFO[39m (1752): [36mMongoDB connected[39m
+[17:03:02.824] [32mINFO[39m (1752): [36mRedis connected[39m
+[ info ] Email via smtp as manageyourcard <tanyagulati06@gmail.com>
+[ info ] SHP-00001 · 3 card(s) · push: sent · email: sent
+[ success ] Done. 2 shop(s) checked, 1 with nothing due, 1 pushed, 1 emailed.
+===== TEST 30-07-2026 22:40:53.11 ===== 
+[17:10:55.065] [32mINFO[39m (27284): [36mMongoDB connected[39m
+[17:10:55.123] [32mINFO[39m (27284): [36mRedis connected[39m
+[ info ] Email via smtp as manageyourcard <tanyagulati06@gmail.com>
+[ info ] SHP-00001 · 4 card(s) · push: skipped · email: sent
+[ success ] Done. 2 shop(s) checked, 1 with nothing due, 0 pushed, 1 emailed.
+===== TEST 30-07-2026 22:41:54.06 ===== 
+[17:11:56.209] [32mINFO[39m (33876): [36mMongoDB connected[39m
+[17:11:56.277] [32mINFO[39m (33876): [36mRedis connected[39m
+[ info ] Email via smtp as manageyourcard <tanyagulati06@gmail.com>
+[ info ] SHP-00001 · 4 card(s) · push: sent · email: sent
+[ success ] Done. 2 shop(s) checked, 1 with nothing due, 1 pushed, 1 emailed.
+===== TEST 30-07-2026 22:42:54.11 ===== 
+[17:12:56.059] [32mINFO[39m (34288): [36mMongoDB connected[39m
+[17:12:56.114] [32mINFO[39m (34288): [36mRedis connected[39m
+[ info ] Email via smtp as manageyourcard <tanyagulati06@gmail.com>
+[ info ] SHP-00001 · 4 card(s) · push: sent · email: sent
+[ success ] Done. 2 shop(s) checked, 1 with nothing due, 1 pushed, 1 emailed.
+===== TEST 30-07-2026 22:48:03.24 ===== 
+[17:18:04.643] [32mINFO[39m (2204): [36mMongoDB connected[39m
+[17:18:04.679] [32mINFO[39m (2204): [36mRedis connected[39m
+^C

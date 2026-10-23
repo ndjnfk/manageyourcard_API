@@ -91,6 +91,18 @@ export interface Registry {
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/cards_controller').default['store']>>> | { status: 422; response: { errors: SimpleError[] } }
     }
   }
+  'cards.cards.show': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/cards/:cardId'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { cardId: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/cards_controller').default['show']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/cards_controller').default['show']>>>
+    }
+  }
   'cards.cards.update': {
     methods: ["PATCH"]
     pattern: '/api/v1/cards/:cardId'
@@ -149,6 +161,114 @@ export interface Registry {
       query: {}
       response: ExtractResponse<Awaited<ReturnType<import('#controllers/shop_profile_controller').default['removePhoto']>>>
       errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/shop_profile_controller').default['removePhoto']>>>
+    }
+  }
+  'account.notifications.show': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/account/notifications'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/notifications_controller').default['show']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/notifications_controller').default['show']>>>
+    }
+  }
+  'account.notifications.update': {
+    methods: ["PATCH"]
+    pattern: '/api/v1/account/notifications'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/notification').notificationPreferencesValidator)>>
+      paramsTuple: []
+      params: {}
+      query: ExtractQuery<InferInput<(typeof import('#validators/notification').notificationPreferencesValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/notifications_controller').default['update']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/notifications_controller').default['update']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'account.notifications.register_device': {
+    methods: ["POST"]
+    pattern: '/api/v1/account/notifications/devices'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/notification').registerDeviceValidator)>>
+      paramsTuple: []
+      params: {}
+      query: ExtractQuery<InferInput<(typeof import('#validators/notification').registerDeviceValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/notifications_controller').default['registerDevice']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/notifications_controller').default['registerDevice']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'account.notifications.revoke_device': {
+    methods: ["DELETE"]
+    pattern: '/api/v1/account/notifications/devices'
+    types: {
+      body: ExtractBody<InferInput<(typeof import('#validators/notification').revokeDeviceValidator)>>
+      paramsTuple: []
+      params: {}
+      query: ExtractQuery<InferInput<(typeof import('#validators/notification').revokeDeviceValidator)>>
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/notifications_controller').default['revokeDevice']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/notifications_controller').default['revokeDevice']>>> | { status: 422; response: { errors: SimpleError[] } }
+    }
+  }
+  'account.notifications.test': {
+    methods: ["POST"]
+    pattern: '/api/v1/account/notifications/test'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/notifications_controller').default['test']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/notifications_controller').default['test']>>>
+    }
+  }
+  'account.notifications.inbox': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/account/notifications/inbox'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/notifications_controller').default['inbox']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/notifications_controller').default['inbox']>>>
+    }
+  }
+  'account.notifications.unread_count': {
+    methods: ["GET","HEAD"]
+    pattern: '/api/v1/account/notifications/inbox/unread'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/notifications_controller').default['unreadCount']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/notifications_controller').default['unreadCount']>>>
+    }
+  }
+  'account.notifications.mark_all_read': {
+    methods: ["POST"]
+    pattern: '/api/v1/account/notifications/inbox/read'
+    types: {
+      body: {}
+      paramsTuple: []
+      params: {}
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/notifications_controller').default['markAllRead']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/notifications_controller').default['markAllRead']>>>
+    }
+  }
+  'account.notifications.mark_read': {
+    methods: ["POST"]
+    pattern: '/api/v1/account/notifications/inbox/:id/read'
+    types: {
+      body: {}
+      paramsTuple: [ParamValue]
+      params: { id: ParamValue }
+      query: {}
+      response: ExtractResponse<Awaited<ReturnType<import('#controllers/notifications_controller').default['markRead']>>>
+      errorResponse: ExtractErrorResponse<Awaited<ReturnType<import('#controllers/notifications_controller').default['markRead']>>>
     }
   }
   'adminAuth.auth.store': {

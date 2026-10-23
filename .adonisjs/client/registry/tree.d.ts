@@ -23,6 +23,7 @@ export interface ApiDefinition {
     cards: {
       index: typeof routes['cards.cards.index']
       store: typeof routes['cards.cards.store']
+      show: typeof routes['cards.cards.show']
       update: typeof routes['cards.cards.update']
     }
   }
@@ -32,6 +33,17 @@ export interface ApiDefinition {
       update: typeof routes['account.shop_profile.update']
       uploadPhoto: typeof routes['account.shop_profile.upload_photo']
       removePhoto: typeof routes['account.shop_profile.remove_photo']
+    }
+    notifications: {
+      show: typeof routes['account.notifications.show']
+      update: typeof routes['account.notifications.update']
+      registerDevice: typeof routes['account.notifications.register_device']
+      revokeDevice: typeof routes['account.notifications.revoke_device']
+      test: typeof routes['account.notifications.test']
+      inbox: typeof routes['account.notifications.inbox']
+      unreadCount: typeof routes['account.notifications.unread_count']
+      markAllRead: typeof routes['account.notifications.mark_all_read']
+      markRead: typeof routes['account.notifications.mark_read']
     }
   }
   adminAuth: {
